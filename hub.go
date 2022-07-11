@@ -18,6 +18,12 @@ type Hub struct {
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	// 表示是否处于运行状态
+	isRunning bool
+
+	// 这个hub的标识符
+	token string
 }
 
 func newHub() *Hub {
@@ -26,6 +32,7 @@ func newHub() *Hub {
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+		isRunning:  true, // 默认是处于运行状态的
 	}
 }
 
@@ -39,6 +46,11 @@ func (h *Hub) run() {
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
+				if len(h.clients) == 0 {
+					delete(hubs, h.token)
+					h.isRunning = false
+					return
+				}
 			}
 		case message := <-h.broadcast:
 			for client := range h.clients { // 给群里的其他用户广播消息
